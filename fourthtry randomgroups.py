@@ -5,49 +5,20 @@
 #program written to satisfy the need to assign random groups each week that do not repeat throughout the semester. 
 
 #step 1: using a list of all different students that have attended lab to date, take attendance then add new students who have not attended lab in previous weeks. Add the new students to the list of all students who have ever attended the lab
-#step 2: #if the attendance list is an odd number of students. first pick a random triplet group such that no two people in the triplet group will be in a triplet group together twice. 
-    #this means that students may end up being with another person up to two times. once as a part of a group of 2 and once as a part of a group of 3. 
-#step 3: using the current week's attendance (of length n minus the 3 students in the triplet group if attendance is odd), use the round robin tournament algorithm to generate a set of all possible different weeks where # of different weeks is n minus 1.
+#step 2: #if the attendance list is an odd number of students. add a fake student to the list for picking random groups then have the person with the fake student join another random group.
+#step 3: using the current week's attendance (with or without the fake student), use the round robin tournament algorithm to generate a set of all possible different weeks where # of different weeks is n minus 1.
 #step 4: pick a random week from step 2 such that no 2-person group used in previous weeks is repeated
 #step 5: return the following: 
     #1. this week's group assignments: a random week from the set of all weeks such that it does not repeat any pairing from any previous week. 
     #2. an updated set of all group assignments used thus far since the beginning of the semester
     #3. This week's attendance list.
     #4. an updated list of all students that have ever attended the lab.
+    #5 week number
 
 
 
-#from a list of names, makes a list of all unique sets of 3 people.
-def tripletmaker(fulllist):
-    if len(fulllist)%2==0:
-        return None
-    comptripset=[]
-    for n in fulllist:
-        for m in fulllist:
-            for l in fulllist:
-                if n!=m and n!=l and m!=l and [m,n,l] not in comptripset and [n,l,m] not in comptripset and [l,m,n] not in comptripset and [m,l,n] not in comptripset and [l,n,m] not in comptripset:
-                    comptripset.append([n,m,l])
-    return comptripset
 
-#compares two triplets, if  one or zero people are present in both groups, returns true. if 2 or 3 people are present in both groups, returns false.
-def tripletcompare(tripletprop,prvgroup):
-    if ((tripletprop[0] not in prvgroup and tripletprop[1] not in prvgroup) or (tripletprop[1] not in prvgroup and tripletprop[2] not in prvgroup) or (tripletprop[0] not in prvgroup and tripletprop[2] not in prvgroup)):
-        return True
-    return False
 
-#takes away all triplets that have been used previously and returns a list of triplets that have not been used previously
-def tripletremover(fulllisttrips,prvtripsused):
-    newlisttrips=[]
-    for l in fulllisttrips:
-        newlisttrips.append(l)
-    for n in prvtripsused:
-        for m in fulllisttrips:
-            if tripletcompare(m,n)==False:
-                try:
-                    newlisttrips.remove(m)
-                except:
-                    continue
-    return newlisttrips
    
 #given list of unique names with an even numbered list, returns a matrix of pairings for n-1 weeks where n is length of list
 def roundrobinmaker(fulllist):
@@ -152,24 +123,30 @@ def getnewnames(weeksfullattendance,masterstudentlist):
             masterstudentlist.append(namq)
     return weeksfullattendance
 
-with open('studentdata.txt','r') as infile:
-    allprevdata=list(infile)
-infile.closed
+errco=0
+while errco==0:
+    try:
+        with open('studentdata.txt','r') as infile:
+            allprevdata=list(infile)
+        infile.closed
+        errco=1
+    except:
+        outfile=open('studentdata.txt','w')
+        outfile.close
+        continue
 if allprevdata==[]:
     weeknum=0
     cumattendance=[]
-    prevtriplets=[]
     prevpairs=[]
 else:
     selecteddata=[]
-    for n in range(-6,0,1):
+    for n in range(-5,0,1):
         selecteddata.append(allprevdata[n])
     weeknum=int(selecteddata[0])
     import random
     import ast
     cumattendance=ast.literal_eval(selecteddata[-1])
-    prevtriplets=ast.literal_eval(selecteddata[-2])
-    prevpairs=ast.literal_eval(selecteddata[-3])
+    prevpairs=ast.literal_eval(selecteddata[-2])
 weeknum=weeknum+1
 print('this week:',weeknum)
 returningstudents=takeattendance(cumattendance)
@@ -178,46 +155,31 @@ for n in attendance:
     if n not in cumattendance:
         cumattendance.append(n)
 if len(attendance)%2==1:
-    for n in range(len(attendance)-1):
+    try:
+        attendance.remove('join another group')
+    except:
+        attendance.append('join another group')
         import random
-        tripchoices=tripletremover(tripletmaker(attendance),prevtriplets)
-        try:
-            trippick=tripchoices[random.randrange(len(tripchoices))]
-            prevtriplets.append(trippick)
-            attendencesubtrtrip=[]
-            for n in attendance:
-                if n not in trippick:
-                    attendencesubtrtrip.append(n)
-            weeksgroups=findweekspartners(attendencesubtrtrip,prevpairs)
-            if weeksgroups!='none':
-                break            
-        except:
-            print('ran out of triplets, resetting the counter')
-            prevtriplets=[]
-            continue
-    if weeksgroups=='none':
-        import sys
-        input('you are out of weeks. enter to exit')
-        sys.exit()
-    for n in weeksgroups:
-        prevpairs.append(n)
-    weeksgroups.append(trippick)
-else:
-    weeksgroups=findweekspartners(attendance,prevpairs)
-    if weeksgroups=='none':
-        import sys
-        input('you are out of weeks. enter to exit')
-        sys.exit()
-    for n in weeksgroups:
-        prevpairs.append(n)
+        oddoneout=random.randrange(1,int(1+((len(attendance)-1)/2)))
+        print()
+        print()
+        print('the odd person out must join group # ',oddoneout,'from the list')
+weeksgroups=findweekspartners(attendance,prevpairs)
+if weeksgroups=='none':
+    import sys
+    input('you are out of weeks. enter to exit')
+    sys.exit()
+for n in weeksgroups:
+    prevpairs.append(n)
 print('for week #',weeknum)
+if 'join another group' in attendance:
+    attendance.remove('join another group')
 print('this weeks attendance was:',attendance)
 print('this weeks groups will be:',weeksgroups)
 print('all pairs to date:',prevpairs)
-print('alltriplets to date:',prevtriplets)
 print('cumulative list of all students to come to class:',cumattendance)
 input('enter to exit')
-filelineitem=[weeknum,attendance,weeksgroups,prevpairs,prevtriplets,cumattendance]
+filelineitem=[weeknum,attendance,weeksgroups,prevpairs,cumattendance]
 outfile=open('studentdata.txt', 'a')
 outfile.write('\n'.join(list(map(str,filelineitem)))+'\n')
 outfile.close()
